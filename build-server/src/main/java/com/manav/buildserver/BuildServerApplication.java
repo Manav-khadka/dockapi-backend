@@ -33,18 +33,20 @@ public class BuildServerApplication {
 
             .region(Region.AP_SOUTH_1)
             .build();
-    private static final String BUCKET_NAME = System.getenv("BUCKET_NAME" );
+    private static final String BUCKET_NAME = "dockapi-build-server";
     private static final String PROJECT_ID = System.getenv("PROJECT_ID" );
 
     // Method to execute command synchronously
     public static Boolean executeCommand(String[] command, String workingDir) {
         try {
+            printLog("Executing command: " + String.join(" ", command));
             // Create a ProcessBuilder to execute the command
             ProcessBuilder processBuilder = new ProcessBuilder(command);
             processBuilder.directory(new java.io.File(workingDir)); // Set the working directory
 
             // Start the process
             Process process = processBuilder.start();
+            // print log
 
             // Read and handle standard output (stdout) from the process
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
@@ -90,6 +92,7 @@ public class BuildServerApplication {
     }
 
     public static void main(String[] args) {
+        printLog("Welcome to dockapi ..." );
         init();
 //		printLog("Starting the Build Server Application...");
     }
@@ -97,6 +100,7 @@ public class BuildServerApplication {
     private static void init() {
         printLog("Starting the Build Server Application..." );
         Path outputDirectoryPath = Paths.get("output" ).toAbsolutePath();
+        printLog("Output directory: " + outputDirectoryPath);
 
         // Ensure the output directory exists
         if (!Files.exists(outputDirectoryPath)) {
@@ -115,40 +119,52 @@ public class BuildServerApplication {
 
         // Execute commands
         Boolean npmInstallSuccess = executeCommand(npmInstallCommand, outputDirectoryPath.toString());
+        printLog("npm install command executed ..: " + npmInstallSuccess);
         Boolean npmBuildSuccess = executeCommand(npmBuildCommand, outputDirectoryPath.toString());
+        printLog("npm build command executed ..: " + npmBuildSuccess);
 
         // Check if all commands executed successfully and get path of dist/ folder inside output directory
         if (npmInstallSuccess && npmBuildSuccess) {
-            Path distDirectoryPath = outputDirectoryPath.resolve("dist" );
+
+            Path distDirectoryPath = outputDirectoryPath.resolve("dist");
             logger.info("Build completed successfully. Output directory: " + distDirectoryPath);
             printLog("Build completed successfully. Output directory: " + distDirectoryPath);
-            // get all files in dist/ directory recursively
+
+            // Get all files in dist/ directory recursively
             try {
                 Files.walk(distDirectoryPath).forEach(filePath -> {
                     logger.info("File: " + filePath);
                     printLog("File: " + filePath);
-                    // if file is a directory then ignore else read file and upload to S3
+
+                    // If the file is a directory, skip it
                     if (!Files.isDirectory(filePath)) {
                         try {
+                            // Read the content of the file
                             String fileContent = Files.readString(filePath);
-                            logger.info("File Content: " + fileContent);
-                            printLog("File Content: " + fileContent);
-                            // Upload file to S3
-                            uploadFileToS3( filePath,"__outputs/"+PROJECT_ID + "/" + filePath.getFileName(), fileContent);
+
+                            // Construct the S3 key using relative path, preserving directory structure
+                            Path relativePath = distDirectoryPath.relativize(filePath);
+                            String s3Key = "__outputs/" + PROJECT_ID + "/" + relativePath.toString().replace("\\", "/");
+
+                            // Upload the file to S3
+                            uploadFileToS3(filePath, s3Key, fileContent);
                         } catch (IOException e) {
                             logger.error("Failed to read file: " + filePath + " - " + e.getMessage(), e);
+                            printLog("Failed to read file: " + filePath + " - " + e.getMessage());
                         }
                     }
                 });
+
+                printLog("All files uploaded to S3 successfully.");
             } catch (IOException e) {
                 logger.error("Failed to list files in dist directory: " + e.getMessage(), e);
             }
 
-
         } else {
-            logger.error("Build failed. Check the logs for details." );
-            printLog("Build failed. Check the logs for details." );
+            logger.error("Build failed. Check the logs for details.");
+            printLog("Build failed. Check the logs for details.");
         }
+
     }
 
 	// upload file to s3 function
