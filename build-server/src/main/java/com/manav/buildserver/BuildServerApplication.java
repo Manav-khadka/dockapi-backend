@@ -27,8 +27,8 @@ public class BuildServerApplication {
     private static final S3Client s3 = S3Client.builder().credentialsProvider(
                     StaticCredentialsProvider.create(AwsBasicCredentials
                             .create(
-                                    System.getenv("AWS_ACCESS_KEY_ID" ),
-                                    System.getenv("AWS_SECRET_ACCESS_KEY" ))
+                                    "AKIAQ3EGUEAVW362GJ62",
+                                    "AxDmifkNAlO64AgbEhztZJuQr+I1oK9GABpHvZ3x")
                     ))
 
             .region(Region.AP_SOUTH_1)
