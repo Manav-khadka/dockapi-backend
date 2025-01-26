@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import java.io.IOException;
 
 @Controller
-public class ReverseProxyController {
+public class    ReverseProxyController {
 
     private static final String BASE_PATH = "https://dockapi-build-server.s3.ap-south-1.amazonaws.com/__outputs";
 
