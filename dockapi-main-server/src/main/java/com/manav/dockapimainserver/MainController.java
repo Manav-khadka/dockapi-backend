@@ -2,13 +2,11 @@ package com.manav.dockapimainserver;
 
 
 import lombok.RequiredArgsConstructor;
+import org.apache.juli.logging.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -21,6 +19,7 @@ import java.util.List;
 @Controller
 @RestController
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")  // Allow only Next.js frontend
 public class MainController {
     Region region = Region.AP_SOUTH_1;
     String accessKeyId = "AKIAQ3EGUEAVW362GJ62"; // Replace with your Access Key ID
@@ -47,8 +46,11 @@ public class MainController {
     }
     @PostMapping("/upload-project")
     public String uploadProject(@RequestBody ProjectRequestBody projectRequestBody) {
-        try {
+
+        logger.info("Received request to upload project: {}", projectRequestBody);
+
             String slug = projectRequestBody.getProjectName()==null?Utility.generateSlug():projectRequestBody.getProjectName();
+        try {
             logger.info("Generated slug: {}", slug);
             logger.info("Github Url: {}",projectRequestBody.getGithubUrl());
             logger.info("Project Name: {}",projectRequestBody.getProjectName());
@@ -93,7 +95,7 @@ public class MainController {
         } catch (EcsException e) {
             System.err.println("Failed to run ECS task: " + e.awsErrorDetails().errorMessage());
         }
-        return "Success";
+        return slug;
     }}
 
 
